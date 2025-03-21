@@ -1,0 +1,7 @@
+# Ignorar ambiente virtual
+venv/
+
+# Ignorar banco de dados
+*.db
+*.sqlite
+*.sqlite3
