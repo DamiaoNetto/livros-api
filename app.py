@@ -48,6 +48,7 @@ def doar():
 
 @app.route('/livros',methods=['GET'])
 def listarLivros():
+    livro_atualizado = request.get_json()
     with sqlite3.connect('database.db') as conn:
         livros = conn.execute("SELECT * FROM livros").fetchall()
 
