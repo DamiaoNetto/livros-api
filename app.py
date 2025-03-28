@@ -48,7 +48,7 @@ def doar():
 
 @app.route('/livros',methods=['GET'])
 def listarLivros():
-    livro_atualizado = request.get_json()
+    # livro_atualizado = request.get_json()
     with sqlite3.connect('database.db') as conn:
         livros = conn.execute("SELECT * FROM livros").fetchall()
 
@@ -67,35 +67,50 @@ def listarLivros():
 
     return jsonify(livrosFormatados)
 
-
 @app.route('/livros/<int:livro_id>', methods=['PUT'])
 def atualizarLivros(livro_id):
-    # Obter os dados da requisição
     livro_atualizado = request.get_json()
 
-    # Verificar se o JSON é válido
     if not livro_atualizado:
         return jsonify({"error": "Dados inválidos ou ausentes"}), 400
 
-    # Extrair os campos do JSON
     titulo = livro_atualizado.get('titulo')
     categoria = livro_atualizado.get('categoria')
     autor = livro_atualizado.get('autor')
     imagem_url = livro_atualizado.get('imagem_url')
 
-    # Verificar se todos os campos necessários estão presentes
-    if not titulo or not categoria or not autor or not imagem_url:
+    if not all([titulo, categoria, autor, imagem_url]):
         return jsonify({"error": "Todos os campos são obrigatórios"}), 400
 
-    # Atualizar o livro no banco de dados
-    with sqlite3.connect('database.db') as conn:
-        conn.execute("""
-            UPDATE livros 
-            SET titulo = ?, categoria = ?, autor = ?, imagem_url = ?
-            WHERE id = ?
-        """, (titulo, categoria, autor, imagem_url, livro_id))
+    try:
+        with sqlite3.connect('database.db') as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM livros WHERE id = ?", (livro_id,))
+            livro_existente = cursor.fetchone()
 
-    return jsonify({"message": "Livro atualizado com sucesso!"}), 200
+            if not livro_existente:
+                return jsonify({"erro": "Livro não encontrado"}), 404
+
+            cursor.execute("""
+                UPDATE livros 
+                SET titulo = ?, categoria = ?, autor = ?, imagem_url = ?
+                WHERE id = ?
+            """, (titulo, categoria, autor, imagem_url, livro_id))
+            conn.commit()
+
+    except sqlite3.Error as e:
+        return jsonify({"erro": f"Erro no banco de dados: {str(e)}"}), 500
+
+    return jsonify({
+        "message": "Livro atualizado com sucesso!",
+        "livro": {
+            "id": livro_id,
+            "titulo": titulo,
+            "categoria": categoria,
+            "autor": autor,
+            "imagem_url": imagem_url
+        }
+    }), 200
 
 
 @app.route('/livros/<int:livro_id>', methods=['DELETE'])
